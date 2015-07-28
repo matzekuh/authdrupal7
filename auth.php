@@ -476,6 +476,45 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         return false;
     }
     
+    /**
+     * Flush cached user information
+     *
+     * @author Christopher Smith <chris@jalakai.co.uk>
+     *
+     * @param  string  $user username of the user whose data is to be removed from the cache
+     *                       if null, empty the whole cache
+     */
+    protected function _flushUserInfoCache($user=null) {
+        if (is_null($user)) {
+            $this->cacheUserInfo = array();
+        } else {
+            unset($this->cacheUserInfo[$user]);
+        }
+    }
+    /**
+     * Quick lookup to see if a user's information has been cached
+     *
+     * This test does not need a database connection or read lock
+     *
+     * @author Christopher Smith <chris@jalakai.co.uk>
+     *
+     * @param  string  $user  username to be looked up in the cache
+     * @param  bool    $requireGroups  true, if cached info should include group memberships
+     *
+     * @return bool    existence of required user information in the cache
+     */
+    protected function _cacheExists($user, $requireGroups=true) {
+        if (isset($this->cacheUserInfo[$user])) {
+            if (!is_array($this->cacheUserInfo[$user])) {
+                return true;          // user doesn't exist
+            }
+            if (!$requireGroups || isset($this->cacheUserInfo[$user]['grps'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
 }
 
 // vim:ts=4:sw=4:et:
