@@ -171,7 +171,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      */
     protected function _retrieveUserInfo($user) {
         $sql    = str_replace('%{user}', $this->_escape($user), $this->getConf('getUserInfo'));
-        $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql)
+        $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql);
         $result = $this->_queryDB($sql);
         if($result !== false && count($result)) {
             $info         = $result[0];
