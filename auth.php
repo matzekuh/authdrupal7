@@ -200,7 +200,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
             $result = $this->_queryDB($sql);
             if($result !== false && count($result)) {
                 foreach($result as $row) {
-                    $groups[] = $row['group'];
+                    $groups[] = $row['name'];
                 }
             }
             return $groups;
