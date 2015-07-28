@@ -5,4 +5,13 @@
  * @author Matthias Jung <matzekuh@web.de>
  */
 
-//$conf['fixme']    = 'FIXME';
+$conf['charset']          = 'utf8';
+$conf['server']           = 'localhost';
+$conf['user']             = '';
+$conf['password']         = '';
+$conf['database']         = '';
+$conf['debug']            = 0;
+$conf['drupalPrefix']     = '';
+$conf['drupalRoot']       = '../'
+
+$conf['checkPass']        = 'SELECT pass FROM %{drupal_prefix}users WHERE name=\'%{user}\'';
