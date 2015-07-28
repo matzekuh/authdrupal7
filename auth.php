@@ -46,7 +46,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         $this->cando['getUserCount']= true; // can the number of users be retrieved?
         $this->cando['getGroups']   = false; // can a list of available groups be retrieved?
         $this->cando['external']    = false; // does the module do external auth checking?
-        $this->cando['logout']      = false; // can the user logout again? (eg. not possible with HTTP auth)
+        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
 
         // FIXME intialize your auth system and set success to true, if successful
         $this->success = true;
