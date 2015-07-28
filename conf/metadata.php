@@ -18,6 +18,7 @@ $meta['TablesToLock']     = array('array','_caution' => 'danger');
 $meta['checkPass']        = array('','_caution' => 'danger');
 $meta['getUserInfo']      = array('','_caution' => 'danger');
 $meta['getGroups']        = array('','_caution' => 'danger');
+$meta['getUserCount']     = array('','_caution' => 'danger');
 
 $meta['FilterLogin']      = array('string','_caution' => 'danger');
 $meta['FilterName']       = array('string','_caution' => 'danger');
