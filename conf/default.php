@@ -15,3 +15,4 @@ $conf['drupalPrefix']     = '';
 $conf['drupalRoot']       = '../'
 
 $conf['checkPass']        = 'SELECT pass FROM %{drupal_prefix}users WHERE name=\'%{user}\'';
+$conf['checkPass']        = 'SELECT name, mail FROM %{drupal_prefix}users WHERE name=\'%{user}\'';
