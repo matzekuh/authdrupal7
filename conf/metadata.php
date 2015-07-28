@@ -15,3 +15,4 @@ $meta['debug']            = array('multichoice','_choices' => array(0,1,2),'_cau
 
 $meta['checkPass']        = array('','_caution' => 'danger');
 $meta['getUserInfo']      = array('','_caution' => 'danger');
+$meta['getGroups']        = array('','_caution' => 'danger');
