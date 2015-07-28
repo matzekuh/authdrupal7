@@ -20,8 +20,3 @@ $conf['checkPass']        = 'SELECT pass FROM %{drupal_prefix}users WHERE name=\
 $conf['getUserInfo']      = 'SELECT name, mail FROM %{drupal_prefix}users WHERE name=\'%{user}\'';
 $conf['getGroups']        = 'SELECT roles.name FROM %{drupal_prefix}users users INNER JOIN %{drupal_prefix}users_roles userroles INNER JOIN %{drupal_prefix}role roles WHERE users.uid = userroles.uid AND roles.rid = userroles.rid AND users.name = \'%{user}\''
 $conf['getUserCount']     = 'SELECT COUNT(*) AS num FROM %{drupal_prefix}users WHERE status = 1';
-
-$conf['FilterLogin']      = '';
-$conf['FilterName']       = '';
-$conf['FilterEmail']      = '';
-$conf['FilterGroup']      = '';
