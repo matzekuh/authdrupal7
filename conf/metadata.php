@@ -12,6 +12,8 @@ $meta['password']         = array('password','_caution' => 'danger');
 $meta['database']         = array('string','_caution' => 'danger');
 $meta['charset']          = array('string','_caution' => 'danger');
 $meta['debug']            = array('multichoice','_choices' => array(0,1,2),'_caution' => 'security');
+$meta['drupalPrefix']     = array('string','_caution' => 'danger');
+$meta['drupalRoot']       = array('string','_caution' => 'danger');
 
 $meta['TablesToLock']     = array('array','_caution' => 'danger');
 
