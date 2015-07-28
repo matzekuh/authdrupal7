@@ -10,6 +10,9 @@
 if(!defined('DOKU_INC')) die();
 
 class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
+    
+    /** @var resource holds the database connection */
+    protected $dbcon = 0;
 
 
     /**
@@ -39,11 +42,11 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         $this->cando['modName']     = false; // can real names be changed?
         $this->cando['modMail']     = false; // can emails be changed?
         $this->cando['modGroups']   = false; // can groups be changed?
-        $this->cando['getUsers']    = true; // can a (filtered) list of users be retrieved?
+        $this->cando['getUsers']    = false; // can a (filtered) list of users be retrieved?
         $this->cando['getUserCount']= true; // can the number of users be retrieved?
-        $this->cando['getGroups']   = true; // can a list of available groups be retrieved?
+        $this->cando['getGroups']   = false; // can a list of available groups be retrieved?
         $this->cando['external']    = false; // does the module do external auth checking?
-        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
+        $this->cando['logout']      = false; // can the user logout again? (eg. not possible with HTTP auth)
 
         // FIXME intialize your auth system and set success to true, if successful
         $this->success = true;
@@ -54,36 +57,6 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      * Log off the current user [ OPTIONAL ]
      */
     //public function logOff() {
-    //}
-
-    /**
-     * Do all authentication [ OPTIONAL ]
-     *
-     * @param   string  $user    Username
-     * @param   string  $pass    Cleartext Password
-     * @param   bool    $sticky  Cookie should not expire
-     * @return  bool             true on successful auth
-     */
-    //public function trustExternal($user, $pass, $sticky = false) {
-        /* some example:
-
-        global $USERINFO;
-        global $conf;
-        $sticky ? $sticky = true : $sticky = false; //sanity check
-
-        // do the checking here
-
-        // set the globals if authed
-        $USERINFO['name'] = 'FIXME';
-        $USERINFO['mail'] = 'FIXME';
-        $USERINFO['grps'] = array('FIXME');
-        $_SERVER['REMOTE_USER'] = $user;
-        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
-        $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
-        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
-        return true;
-
-        */
     //}
 
     /**
@@ -107,7 +80,6 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         if($this->_openDB()) {
             $sql    = str_replace('%{user}', $this->_escape($user), $this->getConf('checkPass'));
             $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql);
-            //$sql    = str_replace('%{dgroup}', $this->_escape($conf['defaultgroup']), $sql);
             $result = $this->_queryDB($sql);
             if($result !== false && count($result) == 1) {
                 $rc = $this->hash_password($pass, $result[0]['pass']) == $result[0]['pass'];
@@ -153,34 +125,106 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         }
         return $info;
     }
-
+    
     /**
-     * Bulk retrieval of user data [implement only where required/possible]
+     * Get a user's information
      *
-     * Set getUsers capability when implemented
+     * The database connection must already be established for this function to work.
      *
-     * @param   int   $start     index of first user to be returned
-     * @param   int   $limit     max number of users to be returned
-     * @param   array $filter    array of field/pattern pairs, null for no filter
-     * @return  array list of userinfo (refer getUserData for internal userinfo details)
+     * @author Christopher Smith <chris@jalakai.co.uk>
+     *
+     * @param  string  $user  username of the user whose information is being reterieved
+     * @param  bool    $requireGroups  true if group memberships should be included
+     * @param  bool    $useCache       true if ok to return cached data & to cache returned data
+     *
+     * @return mixed   false|array     false if the user doesn't exist
+     *                                 array containing user information if user does exist
      */
-    public function retrieveUsers($start = 0, $limit = -1, $filter = null) {
-        // FIXME implement
-        return array();
+    protected function _getUserInfo($user, $requireGroups=true, $useCache=true) {
+        $info = null;
+        if ($useCache && isset($this->cacheUserInfo[$user])) {
+            $info = $this->cacheUserInfo[$user];
+        }
+        if (is_null($info)) {
+            $info = $this->_retrieveUserInfo($user);
+        }
+        if (($requireGroups == true) && $info && !isset($info['grps'])) {
+            $info['grps'] = $this->_getGroups($user);
+        }
+        if ($useCache) {
+            $this->cacheUserInfo[$user] = $info;
+        }
+        return $info;
+    }
+    
+    /**
+     * retrieveUserInfo
+     *
+     * Gets the data for a specific user. The database connection
+     * must already be established for this function to work.
+     * Otherwise it will return 'false'.
+     *
+     * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     *
+     * @param  string $user  user's nick to get data for
+     * @return false|array false on error, user info on success
+     */
+    protected function _retrieveUserInfo($user) {
+        $sql    = str_replace('%{user}', $this->_escape($user), $this->getConf('getUserInfo'));
+        $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql)
+        $result = $this->_queryDB($sql);
+        if($result !== false && count($result)) {
+            $info         = $result[0];
+            return $info;
+        }
+        return false;
+    }
+    
+    /**
+     * Retrieves a list of groups the user is a member off.
+     *
+     * The database connection must already be established
+     * for this function to work. Otherwise it will return
+     * false.
+     *
+     * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     *
+     * @param  string $user user whose groups should be listed
+     * @return bool|array false on error, all groups on success
+     */
+    protected function _getGroups($user) {
+        $groups = array();
+        if($this->dbcon) {
+            $sql    = str_replace('%{user}', $this->_escape($user), $this->getConf('getGroups'));
+            $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql);
+            $result = $this->_queryDB($sql);
+            if($result !== false && count($result)) {
+                foreach($result as $row) {
+                    $groups[] = $row['group'];
+                }
+            }
+            return $groups;
+        }
+        return false;
     }
 
     /**
-     * Return a count of the number of user which meet $filter criteria
-     * [should be implemented whenever retrieveUsers is implemented]
+     * Counts users which meet certain $filter criteria.
      *
-     * Set getUserCount capability when implemented
+     * @author  Matthias Grimm <matthiasgrimm@users.sourceforge.net>
      *
-     * @param  array $filter array of field/pattern pairs, empty array for no filter
-     * @return int
+     * @param  array $filter  filter criteria in item/pattern pairs
+     * @return int count of found users
      */
-    public function getUserCount($filter = array()) {
-        // FIXME implement
-        return 0;
+    public function getUserCount() {
+        $rc = 0;
+        if($this->_openDB()) {
+            $sql = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $this->getConf('getUserCount'));
+            $result = $this->_queryDB($sql);
+            $rc     = $result[0]['num'];
+            $this->_closeDB();
+        }
+        return $rc;
     }
 
     /**
@@ -192,10 +236,10 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      * @param   int $limit
      * @return  array
      */
-    public function retrieveGroups($start = 0, $limit = 0) {
+    //public function retrieveGroups($start = 0, $limit = 0) {
         // FIXME implement
-        return array();
-    }
+    //    return array();
+    //}
 
     /**
      * Return case sensitivity of the backend
@@ -206,22 +250,6 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      */
     public function isCaseSensitive() {
         return false;
-    }
-
-    /**
-     * Sanitize a given username
-     *
-     * This function is applied to any user name that is given to
-     * the backend and should also be applied to any user name within
-     * the backend before returning it somewhere.
-     *
-     * This should be used to enforce username restrictions.
-     *
-     * @param string $user username
-     * @return string the cleaned username
-     */
-    public function cleanUser($user) {
-        return $user;
     }
 
     /**
@@ -368,6 +396,86 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         if(!$this->getConf('debug')) return;
         msg($message, $err, $line, $file);
     }
+    
+    /**
+     * Sends a SQL query to the database
+     *
+     * This function is only able to handle queries that returns
+     * either nothing or an id value such as INPUT, DELETE, UPDATE, etc.
+     *
+     * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     *
+     * @param string $query  SQL string that contains the query
+     * @return int|bool insert id or 0, false on error
+     */
+    protected function _modifyDB($query) {
+        if($this->getConf('debug') >= 2) {
+            msg('MySQL query: '.hsc($query), 0, __LINE__, __FILE__);
+        }
+        if($this->dbcon) {
+            $result = @mysql_query($query, $this->dbcon);
+            if($result) {
+                $rc = mysql_insert_id($this->dbcon); //give back ID on insert
+                if($rc !== false) return $rc;
+            }
+            $this->_debug('MySQL err: '.mysql_error($this->dbcon), -1, __LINE__, __FILE__);
+        }
+        return false;
+    }
+    
+    /**
+     * Locked a list of tables for exclusive access so that modifications
+     * to the database can't be disturbed by other threads. The list
+     * could be set with $conf['plugin']['authmysql']['TablesToLock'] = array()
+     *
+     * If aliases for tables are used in SQL statements, also this aliases
+     * must be locked. For eg. you use a table 'user' and the alias 'u' in
+     * some sql queries, the array must looks like this (order is important):
+     *   array("user", "user AS u");
+     *
+     * MySQL V3 is not able to handle transactions with COMMIT/ROLLBACK
+     * so that this functionality is simulated by this function. Nevertheless
+     * it is not as powerful as transactions, it is a good compromise in safty.
+     *
+     * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     *
+     * @param string $mode  could be 'READ' or 'WRITE'
+     * @return bool
+     */
+    protected function _lockTables($mode) {
+        if($this->dbcon) {
+            $ttl = $this->getConf('TablesToLock');
+            if(is_array($ttl) && !empty($ttl)) {
+                if($mode == "READ" || $mode == "WRITE") {
+                    $sql = "LOCK TABLES ";
+                    $cnt = 0;
+                    foreach($ttl as $table) {
+                        if($cnt++ != 0) $sql .= ", ";
+                        $sql .= "$table $mode";
+                    }
+                    $this->_modifyDB($sql);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    /**
+     * Unlock locked tables. All existing locks of this thread will be
+     * abrogated.
+     *
+     * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     *
+     * @return bool
+     */
+    protected function _unlockTables() {
+        if($this->dbcon) {
+            $this->_modifyDB("UNLOCK TABLES");
+            return true;
+        }
+        return false;
+    }
+    
 }
 
 // vim:ts=4:sw=4:et:
