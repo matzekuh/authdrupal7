@@ -1,7 +1,19 @@
 <?php
 /**
  * DokuWiki Plugin authdrupal7 (Auth Component)
- *
+ * 
+ * Authenticate users based on Drupal7 Database
+ * This Plugin provides password checking using drupals algorithms.
+ * 
+ * Plugin is widely based on the MySQL authentication backend by
+ *      Andreas Gohr <andi@splitbrain.org>
+ *      Chris Smith <chris@jalakai.co.uk>
+ *      Matthias Grimm <matthias.grimmm@sourceforge.net>
+ *      Jan Schumann <js@schumann-it.com>
+ * 
+ * Some further ideas were taken from DokuDrupal Drupal 7.x/MySQL authentication backend by
+ *      Alex Shepherd <n00bATNOSPAMn00bsys0p.co.uk>
+ * 
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Matthias Jung <matzekuh@web.de>
  */
@@ -13,7 +25,6 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
     
     /** @var resource holds the database connection */
     protected $dbcon = 0;
-
 
     /**
      * Constructor.
@@ -34,7 +45,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
             return;
         }
 
-        // FIXME set capabilities accordingly
+        // set capabilities accordingly
         $this->cando['addUser']     = false; // can Users be created?
         $this->cando['delUser']     = false; // can Users be deleted?
         $this->cando['modLogin']    = false; // can login names be changed?
@@ -42,9 +53,9 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         $this->cando['modName']     = false; // can real names be changed?
         $this->cando['modMail']     = false; // can emails be changed?
         $this->cando['modGroups']   = false; // can groups be changed?
-        $this->cando['getUsers']    = false; // can a (filtered) list of users be retrieved?
+        $this->cando['getUsers']    = false; // FIXME can a (filtered) list of users be retrieved?
         $this->cando['getUserCount']= true; // can the number of users be retrieved?
-        $this->cando['getGroups']   = false; // can a list of available groups be retrieved?
+        $this->cando['getGroups']   = false; // FIXME can a list of available groups be retrieved?
         $this->cando['external']    = false; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
 
@@ -54,25 +65,17 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
 
 
     /**
-     * Log off the current user [ OPTIONAL ]
-     */
-    //public function logOff() {
-    //}
-
-    /**
      * Checks if the given user exists and the given plaintext password
      * is correct. Furtheron it might be checked wether the user is
      * member of the right group
      *
-     * Depending on which SQL string is defined in the config, password
-     * checking is done here (getpass) or by the database (passcheck)
-     *
      * @param  string $user user who would like access
      * @param  string $pass user's clear text password to check
      * @return bool
-     *
+     * 
      * @author  Andreas Gohr <andi@splitbrain.org>
      * @author  Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     * @author  Matthias Jung <matzekuh@web.de>
      */
     public function checkPass($user, $pass) {
         global $conf;
@@ -82,14 +85,23 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
             $sql    = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $sql);
             $result = $this->_queryDB($sql);
             if($result !== false && count($result) == 1) {
-                $rc = $this->hash_password($pass, $result[0]['pass']) == $result[0]['pass'];
+                $rc = $this->_hash_password($pass, $result[0]['pass']) == $result[0]['pass'];
             }
             $this->_closeDB();
         }
         return $rc;
     }
     
-    public function hash_password($pass, $hashedpw) {
+    /**
+     * Hashes the password using drupals hashing algorithms
+     * 
+     * @param   string  $pass           user's clear text password to hash
+     * @param   string  $hashedpw       user's pre-hashed password from the database
+     * @return  mixed   boolean|string  hashed password string in case of success, else return boolean false
+     * 
+     * @author  Matthias Jung <matzekuh@web.de>
+     */
+    protected function _hash_password($pass, $hashedpw) {
         $drupalroot = $this->getConf('drupalRoot');
         require_once($drupalroot.'includes/password.inc');
         if(!function_exists(_password_crypt)) {
@@ -165,6 +177,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      * Otherwise it will return 'false'.
      *
      * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     * @author Matthias Jung <matzekuh@web.de>
      *
      * @param  string $user  user's nick to get data for
      * @return false|array false on error, user info on success
@@ -188,6 +201,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      * false.
      *
      * @author Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     * @author Matthias Jung <matzekuh@web.de>
      *
      * @param  string $user user whose groups should be listed
      * @return bool|array false on error, all groups on success
@@ -209,9 +223,10 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
     }
 
     /**
-     * Counts users which meet certain $filter criteria.
+     * Counts users.
      *
      * @author  Matthias Grimm <matthiasgrimm@users.sourceforge.net>
+     * @author  Matthias Jung <matzekuh@web.de>
      *
      * @param  array $filter  filter criteria in item/pattern pairs
      * @return int count of found users
