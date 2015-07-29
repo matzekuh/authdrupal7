@@ -1,4 +1,4 @@
-authdrupal7 Plugin for DokuWiki
+# authdrupal7 Plugin for DokuWiki
 
 Dokuwiki Authetication using Drupal7 accounts
 
