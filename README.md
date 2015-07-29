@@ -13,6 +13,20 @@ Please refer to http://www.dokuwiki.org/plugins for additional info
 on how to install plugins in DokuWiki.
 
 ----
+
+This plugin is widely based on
+
+Dokuwiki MySQL authentication backend
+by      Andreas Gohr <andi@splitbrain.org>
+        Chris Smith <chris@jalakai.co.uk>
+        Matthias Grimm <matthias.grimmm@sourceforge.net>
+        Jan Schumann <js@schumann-it.com>
+
+and
+DokuDrupal Drupal 7.x/MySQL authentication backend
+by      Alex Shepherd <n00bATNOSPAMn00bsys0p.co.uk>
+
+----
 Copyright (C) Matthias Jung <matzekuh@web.de>
 
 This program is free software; you can redistribute it and/or modify
