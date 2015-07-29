@@ -1,7 +1,7 @@
 base   authdrupal7
 author Matthias Jung
 email  matzekuh@web.de
-date   2015-07-28
+date   2015-07-29
 name   authdrupal7 plugin
 desc   Dokuwiki Authetication using Drupal7 accounts
 url    http://www.dokuwiki.org/plugin:authdrupal7
