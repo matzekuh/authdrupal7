@@ -1,5 +1,7 @@
 # authdrupal7 Plugin for DokuWiki
 
+Fork that is planned to implement calls to mysqli instead of deprecated mysql.
+
 Dokuwiki Authetication using Drupal7 accounts
 
 This plugin might be useful if you are running a drupal website and want to give your drupal users access to a dokuwiki using the same login credentials.
