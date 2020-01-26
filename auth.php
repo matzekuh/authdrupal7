@@ -14,8 +14,12 @@
  * Some further ideas were taken from DokuDrupal Drupal 7.x/MySQL authentication backend by
  *      Alex Shepherd <n00bATNOSPAMn00bsys0p.co.uk>
  * 
+ * Updated to access DB via mysqli instead of deprecated mysql by
+ *      Miro Janosik <miro-d7@mypage.sk>
+ *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Matthias Jung <matzekuh@web.de>
+ * @coauthor Miro Janosik <miro-d7@mypage.sk>
  */
 
 // must be run within Dokuwiki
@@ -32,7 +36,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
     public function __construct() {
         parent::__construct(); // for compatibility
         
-        if(!function_exists('mysql_connect')) {
+        if(!function_exists('mysqli_connect')) {
             $this->_debug("MySQL err: PHP MySQL extension not found.", -1, __LINE__, __FILE__);
             $this->success = false;
             return;
@@ -104,7 +108,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
     protected function _hash_password($pass, $hashedpw) {
         $drupalroot = $this->getConf('drupalRoot');
         require_once($drupalroot.'includes/password.inc');
-        if(!function_exists(_password_crypt)) {
+        if(!function_exists('_password_crypt')) {
             msg("Drupal installation not found. Please check your configuration.",-1,__LINE__,__FILE__);
             $this->success = false;
         }
@@ -231,7 +235,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      * @param  array $filter  filter criteria in item/pattern pairs
      * @return int count of found users
      */
-    public function getUserCount() {
+    public function getUserCount($filter=array()) {
         $rc = 0;
         if($this->_openDB()) {
             $sql = str_replace('%{drupal_prefix}', $this->getConf('drupalPrefix'), $this->getConf('getUserCount'));
@@ -307,21 +311,21 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      */
     protected function _openDB() {
         if(!$this->dbcon) {
-            $con = @mysql_connect($this->getConf('server'), $this->getConf('user'), $this->getConf('password'));
+            $con = @mysqli_connect($this->getConf('server'), $this->getConf('user'), $this->getConf('password'));
             if($con) {
-                if((mysql_select_db($this->getConf('database'), $con))) {
-                    if((preg_match('/^(\d+)\.(\d+)\.(\d+).*/', mysql_get_server_info($con), $result)) == 1) {
+                if((mysqli_select_db($con, $this->getConf('database')))) {
+                    if((preg_match('/^(\d+)\.(\d+)\.(\d+).*/', mysqli_get_server_info($con), $result)) == 1) {
                         $this->dbver = $result[1];
                         $this->dbrev = $result[2];
                         $this->dbsub = $result[3];
                     }
                     $this->dbcon = $con;
                     if($this->getConf('charset')) {
-                        mysql_query('SET CHARACTER SET "'.$this->getConf('charset').'"', $con);
+                        mysqli_query($con, 'SET CHARACTER SET "'.$this->getConf('charset').'"');
                     }
                     return true; // connection and database successfully opened
                 } else {
-                    mysql_close($con);
+                    mysqli_close($con);
                     $this->_debug("MySQL err: No access to database {$this->getConf('database')}.", -1, __LINE__, __FILE__);
                 }
             } else {
@@ -342,7 +346,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      */
     protected function _closeDB() {
         if($this->dbcon) {
-            mysql_close($this->dbcon);
+            mysqli_close($this->dbcon);
             $this->dbcon = 0;
         }
     }
@@ -365,14 +369,14 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
         }
         $resultarray = array();
         if($this->dbcon) {
-            $result = @mysql_query($query, $this->dbcon);
+            $result = @mysqli_query($this->dbcon, $query);
             if($result) {
-                while(($t = mysql_fetch_assoc($result)) !== false)
+                while($t = mysqli_fetch_assoc($result))
                     $resultarray[] = $t;
-                mysql_free_result($result);
+                mysqli_free_result($result);
                 return $resultarray;
             }
-            $this->_debug('MySQL err: '.mysql_error($this->dbcon), -1, __LINE__, __FILE__);
+            $this->_debug('MySQL err: '.mysqli_error($this->dbcon), -1, __LINE__, __FILE__);
         }
         return false;
     }
@@ -388,7 +392,7 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
      */
     protected function _escape($string, $like = false) {
         if($this->dbcon) {
-            $string = mysql_real_escape_string($string, $this->dbcon);
+            $string = mysqli_real_escape_string($this->dbcon, $string);
         } else {
             $string = addslashes($string);
         }
@@ -428,12 +432,12 @@ class auth_plugin_authdrupal7 extends DokuWiki_Auth_Plugin {
             msg('MySQL query: '.hsc($query), 0, __LINE__, __FILE__);
         }
         if($this->dbcon) {
-            $result = @mysql_query($query, $this->dbcon);
+            $result = @mysqli_query($this->dbcon, $query);
             if($result) {
-                $rc = mysql_insert_id($this->dbcon); //give back ID on insert
+                $rc = mysqli_insert_id($this->dbcon); //give back ID on insert
                 if($rc !== false) return $rc;
             }
-            $this->_debug('MySQL err: '.mysql_error($this->dbcon), -1, __LINE__, __FILE__);
+            $this->_debug('MySQL err: '.mysqli_error($this->dbcon), -1, __LINE__, __FILE__);
         }
         return false;
     }
