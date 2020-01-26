@@ -1,5 +1,7 @@
 # authdrupal7 Plugin for DokuWiki
 
+Fork that replaced deprecated mysql calls with mysqli.
+
 Dokuwiki Authetication using Drupal7 accounts
 
 This plugin might be useful if you are running a drupal website and want to give your drupal users access to a dokuwiki using the same login credentials.
@@ -30,9 +32,12 @@ and
 DokuDrupal Drupal 7.x/MySQL authentication backend by
 * Alex Shepherd <n00bATNOSPAMn00bsys0p.co.uk>
 
+mysqli fix by
+* Miro Janosik <miro.janosik.geo+ad7@gmail.com>
+
 ----
 ## Configuration
-The plugin will only work if you have a drupal installtion accessible, as it tries to include some drupal code snippets (e.g. the hashing algorithm).
+The plugin will only work if you have a drupal installation accessible, as it tries to include some drupal code snippets (e.g. the hashing algorithm).
 
 In configuration backend you have to edit at least the following entries:
 * MySQL server
@@ -43,9 +48,11 @@ In configuration backend you have to edit at least the following entries:
 
 **Before** setting your authentication mode to ```authdrupal7``` you should think about the following:
 Dokuwiki might only grant access to users that are member of a defined user group. This plugin is reading the user groups from your database.
-Make shure, that you use the exact same user group names in the ACL controls. Otherwise you might not be able to get access to your wiki or your adminstration panel although you are able to log in using correct credentials.
+Make sure, that you use the exact same user group names in the ACL controls. Otherwise you might not be able to get access to your wiki or your adminstration panel although you are able to log in using correct credentials.
 
-In the configuration menu you should consider changing the following entries:
+Easiest way is to go to Admin panel / Config / section Security settings and here add your Drupal user's name into 'superuser' field, for example: ```@admin,ThisIsMe``` where @admin is wiki's admin group (that works while you use Wiki users) and ThisIsMe is Drupal's user name (that works when you turn on the plugin)
+
+In the admin panel / configuration menu / Security settings section you should consider changing the following entries:
 * superuser: add a superuser group (with @) or username that matches one of your drupal roles or users
 * manager: add a manager group (with @) or username that matches one of your drupal roles or users
 
